@@ -240,7 +240,7 @@ if __name__ == '__main__':
         out = d.find(key)
         if out is None:
             not_found += 1
-            print 'Not found.'
+            print('Not found.')
             continue
         else:
             if is_bin:

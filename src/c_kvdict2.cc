@@ -12,7 +12,7 @@
  *       - 构建大文件的索引
  *  
  **/
-#include <python2.7/Python.h> //包含python的头文件
+#include <python3.9/Python.h> //包含python的头文件
 
 #include <map>
 #include <string>
@@ -26,6 +26,7 @@ using namespace __gnu_cxx;
 using namespace std;
 
 typedef KeyIndex_t<KVD_KeyInfo_t> FileOffsetDict_t;
+#define PyInt_AsLong(x) (PyLong_AsLong((x)))
 
 /**
  *  KVDict
@@ -412,7 +413,7 @@ static PyObject * wrapper_load(PyObject *self, PyObject *args)
 {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
     PyObject *fn = PyTuple_GetItem(args, 1);
-    char* filename = PyString_AsString(fn);
+    const char* filename = PyUnicode_AsUTF8(fn);
     bool load_in_memory = (bool)PyInt_AsLong(PyTuple_GetItem(args, 2));
     bool load_from_bin = (bool)PyInt_AsLong(PyTuple_GetItem(args, 3));
 
@@ -430,7 +431,7 @@ static PyObject * wrapper_load(PyObject *self, PyObject *args)
  */
 static PyObject * wrapper_write_mem_bin(PyObject *self, PyObject *args) {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    char* output_filename = PyString_AsString(PyTuple_GetItem(args, 1));
+    const char* output_filename = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 
     fprintf(stderr, "begin writing memory_dict [dict_id:%d] to [%s]...\n", did, output_filename);
     if (did<0 || did>=(int)g_dict_pool.size()) {
@@ -445,7 +446,7 @@ static PyObject * wrapper_write_mem_bin(PyObject *self, PyObject *args) {
 static PyObject * wrapper_load_mem_bin(PyObject *self, PyObject *args)
 {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    char* dict_name = PyString_AsString(PyTuple_GetItem(args, 1));
+    const char* dict_name = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
     if (did<0 || did>=(int)g_dict_pool.size()) {
         return Py_BuildValue("i", -1);
     }
@@ -463,7 +464,7 @@ static PyObject * wrapper_load_mem_bin(PyObject *self, PyObject *args)
 static PyObject * wrapper_write_index(PyObject *self, PyObject *args)
 {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    char* output_filename = PyString_AsString(PyTuple_GetItem(args, 1));
+    const char* output_filename = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 
     fprintf(stderr, "Writting file index: %d, out_fn: %s\n", did, output_filename);
     if (did<0 || did>=(int)g_dict_pool.size()) {
@@ -477,8 +478,8 @@ static PyObject * wrapper_write_index(PyObject *self, PyObject *args)
 static PyObject * wrapper_load_index_and_file(PyObject *self, PyObject *args)
 {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    const char* index_file_name = PyString_AsString(PyTuple_GetItem(args, 1));
-    const char* filename = PyString_AsString(PyTuple_GetItem(args, 2)); 
+    const char* index_file_name = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
+    const char* filename = PyUnicode_AsUTF8(PyTuple_GetItem(args, 2)); 
 
     if (did<0 || did>=(int)g_dict_pool.size()) {
         return Py_BuildValue("i", -1);
@@ -497,7 +498,7 @@ static PyObject * wrapper_load_index_and_file(PyObject *self, PyObject *args)
 
 static PyObject * wrapper_seek(PyObject *self, PyObject *args) {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    const char* key = PyString_AsString(PyTuple_GetItem(args, 1));
+    const char* key = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
     if (key == NULL) {
         fprintf(stderr, "KVDict: parse input key failed! key is NULL.");
         Py_INCREF(Py_None);
@@ -515,7 +516,7 @@ static PyObject * wrapper_seek(PyObject *self, PyObject *args) {
 
 static PyObject * wrapper_has(PyObject *self, PyObject *args) {
     int did = PyInt_AsLong(PyTuple_GetItem(args, 0));
-    const char* key = PyString_AsString(PyTuple_GetItem(args, 1));
+    const char* key = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
     int found = has(did, key);
     return Py_BuildValue("i", found);
 }
@@ -523,29 +524,47 @@ static PyObject * wrapper_has(PyObject *self, PyObject *args) {
 // 3 方法列表
 static PyMethodDef CKVDictFunc[] = {
     // 创建一个词典
-    { "create", wrapper_create, METH_VARARGS, "create a dict."},
+    { "create", (PyCFunction)wrapper_create, METH_VARARGS, "create a dict."},
     // 读取文件到词典，可选是否是内存结构
-    { "load", wrapper_load, METH_VARARGS, "load files into dict."},
+    { "load", (PyCFunction)wrapper_load, METH_VARARGS, "load files into dict."},
     // 查找信息
-    { "find", wrapper_seek, METH_VARARGS, "search dict. return None if not exists."},
+    { "find", (PyCFunction)wrapper_seek, METH_VARARGS, "search dict. return None if not exists."},
     // 是否包含特定key
-    { "has", wrapper_has, METH_VARARGS, "check key in dict."},
+    { "has", (PyCFunction)wrapper_has, METH_VARARGS, "check key in dict."},
     // 将内存词典序列化到文件
-    { "write_mem_bin", wrapper_write_mem_bin, METH_VARARGS, "write mem-dict to bin file." },
+    { "write_mem_bin", (PyCFunction)wrapper_write_mem_bin, METH_VARARGS, "write mem-dict to bin file." },
     // 读取序列化好的文件
-    { "load_mem_bin", wrapper_load_mem_bin, METH_VARARGS, "load mem-dict to bin file." },
+    { "load_mem_bin", (PyCFunction)wrapper_load_mem_bin, METH_VARARGS, "load mem-dict to bin file." },
     // 将索引写到硬盘
-    { "write_index",  wrapper_write_index, METH_VARARGS, "write dict to index-file."},
+    { "write_index",  (PyCFunction)wrapper_write_index, METH_VARARGS, "write dict to index-file."},
     // 将索引和对应的文件读入到硬盘词典
-    { "load_index_and_files", wrapper_load_index_and_file, METH_VARARGS, "load index and files to memory." },
+    { "load_index_and_files", (PyCFunction)wrapper_load_index_and_file, METH_VARARGS, "load index and files to memory." },
     { NULL, NULL, 0, NULL }
 };
-// 4 模块初始化方法
+/*
+// 4 python2模块初始化方法
 PyMODINIT_FUNC initc_kvdict2(void) {
     //初始模块，把CKVDictFunc初始到c_kvdict中
     PyObject *m = Py_InitModule("c_kvdict2", CKVDictFunc);
     if (m == NULL)
         return;
+}
+*/
+
+static struct PyModuleDef Combinations = {
+    PyModuleDef_HEAD_INIT,
+    "c_kvdict2", /* name of module */
+    NULL,
+    -1,
+    CKVDictFunc
+};
+
+// python3 模块初始化方法
+PyMODINIT_FUNC PyInit_c_kvdict2(void) {
+    PyObject * m = PyModule_Create(&Combinations);
+    if (m == NULL)
+        return NULL;
+    return m;
 }
 
 /* vim: set expandtab ts=4 sw=4 sts=4 tw=100: */

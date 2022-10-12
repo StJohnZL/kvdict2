@@ -21,40 +21,39 @@ def test_file(d):
     for k in key_list:
         s = d.find(k)
     during = time.time() - tm_begin
-    print >> sys.stderr, "SEARCHING_KEYS : %d" % len(key_list)
-    print >> sys.stderr, "USING_TIME     : %.3f(s)" % during
-    print >> sys.stderr, "AVERAGE_TIME   : %.3f(s)" % (during / len(key_list))
-    print >> sys.stderr, "QPS            : %.1f qps" % (len(key_list) / during)
+    sys.stderr.write("SEARCHING_KEYS : %d\n" % len(key_list))
+    sys.stderr.write("USING_TIME     : %.3f(s)\n" % during)
+    sys.stderr.write("AVERAGE_TIME   : %.3f(s)\n" % (during / len(key_list)))
+    sys.stderr.write("QPS            : %.1f qps\n" % (len(key_list) / during))
 
 if __name__=='__main__':
     test_num = 1000000
     key_length = 8
     value_length = 128
 
-    print >> sys.stderr, "preparing data.."
+    sys.stderr.write("preparing data..\n")
     file_name = 'benchmark_data.txt'
     os.system('rm -rf %s' % file_name)
 
     key_list = []
-    f = file(file_name, 'w')
-    for i in range(test_num):
-        key = random_string(key_length)
-        value = random_string(value_length)
-        f.write('%s\t%s\n' % (key, value))
-        key_list.append(key)
-        if i % 100000 == 0:
-            print >> sys.stderr, "write %d record(s)" % i
-    f.close()
-    print >> sys.stderr, "complete preparing."
+    with open(file_name, 'w') as f:
+        for i in range(test_num):
+            key = random_string(key_length)
+            value = random_string(value_length)
+            f.write('%s\t%s\n' % (key, value))
+            key_list.append(key)
+            if i % 100000 == 0:
+                sys.stderr.write("write %d record(s)\n" % i)
+    sys.stderr.write("complete preparing.\n")
 
     key_list = sorted(key_list)
     
     d = kvdict2.FileIndexKVDict()
-    print >> sys.stderr, "KEY_LENGTH    : %d" % key_length
-    print >> sys.stderr, "VALUE_LENGTH  : %d" % value_length
-    print >> sys.stderr, "TEST #1 LOAD IN DISK:"
+    sys.stderr.write("KEY_LENGTH    : %d\n" % key_length)
+    sys.stderr.write("VALUE_LENGTH  : %d\n" % value_length)
+    sys.stderr.write("TEST #1 LOAD IN DISK:\n")
     test_file(d)
-    print >> sys.stderr, "TEST #2 LOAD IN MEMORY:"
+    sys.stderr.write("TEST #2 LOAD IN MEMORY:\n")
     d = kvdict2.KVDict()
     test_file(d)
 

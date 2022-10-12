@@ -1,4 +1,5 @@
 
+HOME=/ldap_home/johnn.zhang/env/python_env/anaconda/envs/py39/include
 VERSION = 1.1.0
 CPPFLAGS =  -D__VERSION_ID__="\"$(VERSION)\"" -g -Wall -O2 -fPIC  -pipe -D_REENTRANT -DLINUX -Wall
 PYTHON_HEADER_DIR = $(HOME)/
